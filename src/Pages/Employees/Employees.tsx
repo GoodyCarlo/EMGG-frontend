@@ -13,6 +13,9 @@ import CalendarGeneral from "../../Components/Calendar/CalendarGeneral";
 import EmployeeDetails from "./EmployeeDetails";
 import EditEmployee from "./EditEmployee";
 import AddEmployees from "./AddEmployee";
+import { Helmet } from "react-helmet";
+import { AppName } from "../../Helpers/Util";
+import { getRoleId } from "../../Helpers/UserFunctions";
 
 const Employees: React.FC= () => {
     const [employees, setEmployees] = useState<[Employee]>()
@@ -21,26 +24,14 @@ const Employees: React.FC= () => {
     const action = paths[2]
     const [selectedEmployeeId, setSelectedEmployeeId] = useState('')
     const [isEmployeesChanged, setIsEmployeesChanged] = useState(false)
+    const role_id = getRoleId()
     
-    const tempEmployee:Employee = {
-        address: "address",
-        contact_no: "contact",
-        first_name: "first",
-        id: "1",
-        middle_name: "mid",
-        last_name: "last",
-        position_id: "1",
-        position_name: "secret",
-        rate: "123",
-        payout: "as",
-        sss: "123",
-    }
     // FETCH USERS DATA
     useEffect(()=>{
         getEmployees()
             .then((response)=>{
-                console.log(response)
-                console.log(response.data.data.employees)
+                // console.log(response)
+                // console.log(response.data.data.employees)
                 setEmployees(response.data.data.employees)
                 setIsEmployeesChanged(false)
             })
@@ -64,7 +55,7 @@ const Employees: React.FC= () => {
                 />
             )
         }
-        else if (action === "edit"){
+        else if (action === "edit" && role_id==="1"){
             return (
                 <EditEmployee
                     employeeArg={getSelectedEmployee()}
@@ -72,7 +63,7 @@ const Employees: React.FC= () => {
                 />
             )
         }
-        else if (action === "add"){
+        else if (action === "add" && role_id==="1"){
             setSelectedEmployeeId('')
             return (
                 <AddEmployees
@@ -93,6 +84,9 @@ const Employees: React.FC= () => {
 
     return (
         <div className="employees-container">
+            <Helmet>
+                <title>Employees - {AppName}</title>
+            </Helmet>
             <div className="employees-content-wrapper">
                 <Sidebar/>
                 <div className="employee-list-container">
@@ -102,6 +96,7 @@ const Employees: React.FC= () => {
                             <Button
                                 type="add-employee"
                                 handleClick={()=>{}}
+                                disabled={role_id!=="1"}
                             />
                         </NavLink>
                     </div>

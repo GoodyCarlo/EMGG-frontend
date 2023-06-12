@@ -13,6 +13,9 @@ import "./UserDetails.css"
 import Users from "./Users";
 import type UserType from "../../Types/User";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Helmet } from "react-helmet";
+import { AppName } from "../../Helpers/Util";
+import { getRoleId } from "../../Helpers/UserFunctions";
 
 interface UserDetailsProps{
     user: UserType|undefined;
@@ -24,6 +27,7 @@ const UserDetails:React.FC<UserDetailsProps> = ({user, setIsChanged}) => {
     const navigate = useNavigate()
     const urlHeader = "/users/details/user_id="
     const user_id = String(location.pathname.substring(urlHeader.length));
+    const role_id = getRoleId()
 
     const handleDelete = async() => {
         deleteUser(user_id)
@@ -53,9 +57,9 @@ const UserDetails:React.FC<UserDetailsProps> = ({user, setIsChanged}) => {
 
     return(
         <div className="user-details-container">
-            {/* <div className="sidebar-area-container">
-                <Users/>
-            </div> */}
+            <Helmet>
+                <title>User {user?.first_name} {user?.last_name} - {AppName}</title>
+            </Helmet>
             <div className="user-details-content-wrapper">
                 <p className="user-details-back"><NavLink to={"/users"} className={"user-details-back"}>&lt; Back to user list</NavLink></p>
 
@@ -89,6 +93,7 @@ const UserDetails:React.FC<UserDetailsProps> = ({user, setIsChanged}) => {
                         <Button
                             type="delete-with-confirmation"
                             handleClick={handleDelete}
+                            disabled={role_id!=="1"}
                         />
                     </div>
 
@@ -96,6 +101,7 @@ const UserDetails:React.FC<UserDetailsProps> = ({user, setIsChanged}) => {
                         <Button
                             type="user-edit"
                             handleClick={()=>{navigate("/users/edit/user_id="+user_id)}}
+                            disabled={role_id!=="1"}
                         />
                     </div>
 

@@ -11,6 +11,8 @@ import { useNavigate, NavLink } from "react-router-dom";
 import ValidateEmployees from "../../Helpers/Validations/ValidateEmployees"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { getPositions } from "../../ApiCalls/EmployeesApi";
+import { Helmet } from "react-helmet";
+import { AppName } from "../../Helpers/Util";
 
 import "./EditEmployee.css"
 
@@ -41,12 +43,12 @@ const EditEmployee: React.FC<EditEmployeeProps> = ({employeeArg, setIsEmployeesC
     };
     
     const handleSubmit = () => {
-        console.log(employee)
+        // console.log(employee)
         
         if (ValidateEmployees(employee, setError)){
             updateEmployee(employee)
                 .then((response)=>{
-                    console.log(response)
+                    // console.log(response)
                     if (response.data.status === "200"){
                         toast.success(response.data.message, toasterConfig);
                         setIsEmployeesChanged(true)
@@ -57,7 +59,7 @@ const EditEmployee: React.FC<EditEmployeeProps> = ({employeeArg, setIsEmployeesC
                 })
         } else {
             toast.error("Invalid employee details.", toasterConfig);
-            console.log(error)
+            // console.log(error)
         }
     }
 
@@ -77,6 +79,9 @@ const EditEmployee: React.FC<EditEmployeeProps> = ({employeeArg, setIsEmployeesC
   
     return (
         <div className="edit-employees-container">
+            <Helmet>
+                <title>Edit Employee - {AppName}</title>
+            </Helmet>
             <div className="edit-employees-content-wrapper">
                 <div className="edit-employee-form-container">
                     <div className="edit-employee-header">
@@ -164,7 +169,7 @@ const EditEmployee: React.FC<EditEmployeeProps> = ({employeeArg, setIsEmployeesC
                                         Contact number <span className="input-required">*</span>
                                     </Form.Label>
                                     <Form.Control 
-                                        type="text" 
+                                        type="number" 
                                         required={true} 
                                         id="contact_no"
                                         name="contact_no"
@@ -223,7 +228,7 @@ const EditEmployee: React.FC<EditEmployeeProps> = ({employeeArg, setIsEmployeesC
                                         value={employee.rate}
                                     />
                                     <Form.Control.Feedback type="invalid">
-                                        Daily rate is required
+                                        Daily rate is required and should be valid
                                     </Form.Control.Feedback>
                                 </Form.Group>
                             </Col>
@@ -235,15 +240,18 @@ const EditEmployee: React.FC<EditEmployeeProps> = ({employeeArg, setIsEmployeesC
                                     <Form.Control 
                                         type="number" 
                                         required={true} 
-                                        id="sss"
-                                        name="sss"
+                                        id="SSS"
+                                        name="SSS"
                                         onChange={(e) => handleChange(e)}
                                         className="edit-employee-input-box half-size"
                                         autoComplete={"off"}
-                                        isInvalid={error.sss}
-                                        value={employee.sss}
+                                        isInvalid={error.SSS}
+                                        value={employee.SSS}
                                     />
                                 </Form.Group>
+                                <Form.Control.Feedback type="invalid">
+                                        SSS contribution should be valid
+                                </Form.Control.Feedback>
                             </Col>
                         </Row>
 

@@ -5,6 +5,8 @@ import React, { useState } from 'react';
 import { LoginApi } from "../../ApiCalls/AuthApi";
 import toast from 'react-hot-toast';
 import toasterConfig from "../../Helpers/ToasterConfig";
+import { Helmet } from 'react-helmet';
+import { AppName } from "../../Helpers/Util";
 
 // import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
@@ -29,15 +31,17 @@ const Login = () => {
     const signIn = async() => {
         toast.loading("Logging in...")
         const response:any = await LoginApi(username, password)
-        console.log(response)
+        // console.log(response)
         
         if (response.data.status === 200){
             localStorage.setItem("loggedin", "0");
-            // localStorage.setItem("role", JSON.stringify(response.data.data.role));
-            // localStorage.setItem("username", JSON.stringify(response.data.data.role));
+            localStorage.setItem("role_id", JSON.stringify(response.data.data.role_id));
             localStorage.setItem("token", JSON.stringify(response.data.data.token));
             localStorage.setItem("tokenExpiry", JSON.stringify(response.data.data.token_expiry));
             localStorage.setItem("requester", response.data.data.requester);
+            localStorage.setItem("user-name", response.data.data.first_name + " " + 
+                    (response.data.data.middle_name===""? "":response.data.data.middle_name + " ") + 
+                    response.data.data.last_name)
             toast.dismiss()
             toast.success('Login Sucess!', toasterConfig);
 
@@ -56,9 +60,12 @@ const Login = () => {
 
     return(
         <div className="login-container">
+            <Helmet>
+                <title>Login - {AppName}</title>
+            </Helmet>
             <div className="login-box">
                 <div className="login-body">
-                    <h1 className="login-title">ERP System</h1>
+                    <h1 className="login-title">{AppName}</h1>
                     <Form>
                         <FormGroup className="login-form">
                             <FormLabel className="login-label">

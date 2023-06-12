@@ -11,8 +11,11 @@ import { toast } from "react-hot-toast";
 import { useNavigate, NavLink } from "react-router-dom";
 import ValidateUsers from "../../Helpers/Validations/ValidateUsers"
 import Container from 'react-bootstrap/Container';
+import { Helmet } from "react-helmet";
+import { AppName } from "../../Helpers/Util";
 
 import "./AddUser.css"
+
 
 interface AddUserProps{
     setIsChanged: Function;
@@ -32,9 +35,9 @@ const AddUsers: React.FC<AddUserProps> = ({setIsChanged}) => {
         }));
     };
 
-    console.log(user)
+    // console.log(user)
     const handleSubmit = () => {
-        console.log(user)
+        // console.log(user)
         
         if (ValidateUsers(user, setError)){
             createUser(user)
@@ -53,12 +56,15 @@ const AddUsers: React.FC<AddUserProps> = ({setIsChanged}) => {
                 })
         } else {
             toast.error("Invalid user details.", toasterConfig);
-            console.log(error)
+            // console.log(error)
         }
     }
 
     return (
         <div className="add-users-container">
+            <Helmet>
+                <title>Add User - {AppName}</title>
+            </Helmet>
             <div className="add-user-content-wrapper">
                 {/* <div className="add-user-user-list-wrapper">
                     <Users/>

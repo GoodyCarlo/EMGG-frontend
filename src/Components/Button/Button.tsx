@@ -39,6 +39,7 @@ const Button: React.FC<ButtonProps> = ({
       <button
         className="btn-hover-fx btn-user light small"
         onClick={e => handleClick(e)}
+        disabled={disabled}
       >
         <FontAwesomeIcon icon={["fas", "user-plus"]} className="user-icon" />
         ADD USER
@@ -51,6 +52,7 @@ const Button: React.FC<ButtonProps> = ({
       <button
         className="btn-hover-fx btn-user light small"
         onClick={e => handleClick(e)}
+        disabled={disabled}
       >
         <FontAwesomeIcon icon={["fas", "user-plus"]} className="user-icon" />
         ADD EMPLOYEE
@@ -64,7 +66,7 @@ const Button: React.FC<ButtonProps> = ({
         className="btn-hover-fx btn-sign-in"
         onClick={e => handleClick(e)}
       >
-        <b>SIGN IN</b>
+        <b>LOGIN</b>
       </button>
     )
   }
@@ -96,6 +98,7 @@ const Button: React.FC<ButtonProps> = ({
       <button
         className="btn-hover-fx btn-user dark"
         onClick={e => handleClick(e)}
+        disabled={disabled}
       >
         <FontAwesomeIcon icon={["fas", "user-pen"]} className="user-icon" />
         Edit
@@ -146,6 +149,7 @@ const Button: React.FC<ButtonProps> = ({
       <OverlayTrigger trigger="click" placement="top" overlay={deleteConfirmPopup} rootClose={true}>
         <button
           className="btn-user btn-delete light red"
+          disabled={disabled}
         >
           <FontAwesomeIcon icon={["fas", "user-xmark"]} className="user-icon" />
           <text>Delete</text>
@@ -214,7 +218,6 @@ const Button: React.FC<ButtonProps> = ({
     )
   }
 
-
   if (type === "calendar-attendance-status-v2") {
 
     return (
@@ -275,17 +278,96 @@ const Button: React.FC<ButtonProps> = ({
     )
   }
 
-  if (type === "export-pdf") {
+  if (type === "export-csv") {
     return (
       <button
         className="btn-hover-fx btn-user light right"
         onClick={e => handleClick(e)}
       >
-        EXPORT TO PDF
+        EXPORT TO CSV
       </button>
     )
   }
 
+  if (type === "expenses-set-date") {
+    return (
+      <button
+        className={"btn-hover-fx btn-expenses light " + className}
+        onClick={e => handleClick(e)}
+        name={"set-date"}
+      >
+        <FontAwesomeIcon icon={["fas", "calendar"]} className="user-icon" />
+        Set grow period range
+      </button>
+    )
+  }
+
+  if (type === "expenses-create-grow") {
+    return (
+      <button
+        className={"btn-hover-fx btn-expenses dark " + className}
+        onClick={e => handleClick(e)}
+        name={"set-date"}
+      >
+        <FontAwesomeIcon icon={["fas", "egg"]} className="user-icon" />
+        Create Grow
+      </button>
+    )
+  }
+
+  if (type === "expenses-add-item") {
+    return (
+      <button
+        className={"btn-hover-fx btn-expenses dark " + className}
+        onClick={e => handleClick(e)}
+        name={"add-item"}
+        disabled={disabled}
+      >
+        <FontAwesomeIcon icon={["fas", "plus"]} className="add-icon" />
+        Add entry
+      </button>
+    )
+  }
+
+  if (type === "expense-delete-with-confirmation") {
+    const deleteConfirmPopup = (
+      <Popover id="popover-basic" className="confirm-delete-popover">
+        <Popover.Header className="popover-header">Confirm Delete?</Popover.Header>
+        <Popover.Body>
+          <button className="btn-user cancel light btn-hover-fx" onClick={() => document.body.click()}>
+            Cancel
+          </button>
+          <button className="btn-user delete btn-hover-fx" onClick={e => handleClick(e)}>
+            Delete
+          </button>
+        </Popover.Body>
+      </Popover>
+    )
+
+    return (
+      <OverlayTrigger trigger="click" placement="bottom" overlay={deleteConfirmPopup} rootClose={true}>
+        <button
+          className="btn-expenses btn-delete light red"
+        >
+          <FontAwesomeIcon icon={["fas", "trash-can"]} className="user-icon" />
+          <text>Delete</text>
+        </button>
+      </OverlayTrigger>
+    )
+  }
+
+  if (type === "expense-export") {
+    return (
+      <button
+        className="btn-export btn-expenses dark btn-hover-fx"
+        onClick={e => handleClick(e)}
+        disabled={disabled}
+      >
+        <FontAwesomeIcon icon={["fas", "file-export"]} className="user-icon" />
+        Export to PDF
+      </button>
+    )
+  }
 
   return (
     <button

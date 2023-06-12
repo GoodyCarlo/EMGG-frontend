@@ -12,6 +12,8 @@ import { useNavigate, NavLink } from "react-router-dom";
 import ValidateEmployees from "../../Helpers/Validations/ValidateEmployees"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { getPositions } from "../../ApiCalls/EmployeesApi";
+import { Helmet } from "react-helmet";
+import { AppName } from "../../Helpers/Util";
 
 import "./AddEmployee.css"
 
@@ -41,7 +43,7 @@ const AddEmployees: React.FC<AddEmployeesProps> = ({setIsEmployeesChanged}) => {
     };
     
     const handleSubmit = () => {
-        console.log(employee)
+        // console.log(employee)
         
         if (ValidateEmployees(employee, setError)){
             createEmployee(employee)
@@ -56,13 +58,16 @@ const AddEmployees: React.FC<AddEmployeesProps> = ({setIsEmployeesChanged}) => {
                 })
         } else {
             toast.error("Invalid employee details.", toasterConfig);
-            console.log(error)
+            // console.log(error)
         }
     }
-    console.log(employee)
+    // console.log(employee)
   
     return (
         <div className="add-employees-container">
+            <Helmet>
+                <title>Add Employee - {AppName}</title>
+            </Helmet>
             <div className="add-employees-content-wrapper">
                 <div className="add-employee-form-container">
                     <div className="add-employee-header">
@@ -100,6 +105,7 @@ const AddEmployees: React.FC<AddEmployeesProps> = ({setIsEmployeesChanged}) => {
                                         className="add-employee-input-box half-size"
                                         autoComplete={"off"}
                                         placeholder="MIDDLE NAME"
+                                        isInvalid={error.middle_name}
                                     />
                                     <Form.Control 
                                         type="text" 
@@ -113,7 +119,7 @@ const AddEmployees: React.FC<AddEmployeesProps> = ({setIsEmployeesChanged}) => {
                                         isInvalid={error.last_name}
                                     />
                                     <Form.Control.Feedback type="invalid">
-                                        First and last names are required
+                                        First and last names are required. All names should not contain any number.
                                     </Form.Control.Feedback>
                             </Form.Group>
                         </Row>
@@ -146,7 +152,7 @@ const AddEmployees: React.FC<AddEmployeesProps> = ({setIsEmployeesChanged}) => {
                                         Contact number <span className="input-required">*</span>
                                     </Form.Label>
                                     <Form.Control 
-                                        type="text" 
+                                        type="number" 
                                         required={true} 
                                         id="contact_no"
                                         name="contact_no"
@@ -202,7 +208,7 @@ const AddEmployees: React.FC<AddEmployeesProps> = ({setIsEmployeesChanged}) => {
                                         isInvalid={error.rate}
                                     />
                                     <Form.Control.Feedback type="invalid">
-                                        Daily rate is required
+                                        Daily rate is required and should be valid
                                     </Form.Control.Feedback>
                                 </Form.Group>
                             </Col>
@@ -214,13 +220,16 @@ const AddEmployees: React.FC<AddEmployeesProps> = ({setIsEmployeesChanged}) => {
                                     <Form.Control 
                                         type="number" 
                                         required={true} 
-                                        id="sss"
-                                        name="sss"
+                                        id="SSS"
+                                        name="SSS"
                                         onChange={(e) => handleChange(e)}
                                         className="add-employee-input-box half-size"
                                         autoComplete={"off"}
-                                        isInvalid={error.sss}
+                                        isInvalid={error.SSS}
                                     />
+                                    <Form.Control.Feedback type="invalid">
+                                        SSS contribution should be valid
+                                    </Form.Control.Feedback>
                                 </Form.Group>
                             </Col>
                         </Row>
