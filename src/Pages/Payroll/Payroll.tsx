@@ -1,17 +1,19 @@
 // local imports
 import Button from "../../Components/Button/Button";
 import Sidebar from "../../Components/Sidebar/Sidebar";
+import PayrollDetailType from "../../Types/PayrollDetail";
+import Payroll2PDF from "../../Helpers/Exporters/Payroll2PDF";
+import { createPayroll, getPayroll } from "../../ApiCalls/PayrollApi";
 
 // helper imports
-import { formatMoney } from "../../Helpers/Util";
+import { moneyFormatter } from "../../Helpers/Util";
 
 // external imports
 import { DatePicker, Table } from 'antd';
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import dayjs, { Dayjs } from 'dayjs';
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Select, { components, OptionProps } from 'react-select';
-import { ExportToCsv } from 'export-to-csv';
+import { toast } from "react-hot-toast";
 
 // type imports
 import Employee, { emptyEmployee } from "../../Types/Employee";
@@ -20,22 +22,21 @@ import Employee, { emptyEmployee } from "../../Types/Employee";
 import { getEmployees, getPositions, getAttendance, } from "../../ApiCalls/EmployeesApi";
 import { getAdvance } from "../../ApiCalls/AdvanceApi";
 
+
+// helper imports
+import toasterConfig, { longToasterConfig } from "../../Helpers/ToasterConfig";
+
 import "./Payroll.css"
 
 import { Helmet } from "react-helmet";
 import { AppName } from "../../Helpers/Util";
+import { report } from "process";
 
 
-interface PayrollTableData {
-  name: string;
-  position: string;
-  num_days: number;
-  rate: string;
-  gross_salary: number;
-  cash_advance: number;
-  employee_sss: string;
-  net_salary: number;
-};
+function useForceUpdate() {
+    const [value, setValue] = useState(0);
+    return () => setValue((value) => value + 1);
+}
 
 const Payroll: React.FC = () => {
   const { RangePicker } = DatePicker
@@ -46,18 +47,22 @@ const Payroll: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [isEmployeesChanged, setIsEmployeesChanged] = useState(false)
 
-
-  const [reportData, setReportData] = useState<any[]>([])
-  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
-  const [selectedPositions, setSelectedPositions] = useState<string[]>([]);
+  const [reportData, setReportData] = useState<PayrollDetailType[]>([])
+  const [totalSalary, setTotalSalary] = useState(0);
+  const [selectedEmployees, setSelectedEmployees] = useState<any>([]);
   const [selectedPayouts, setSelectedPayouts] = useState<string[]>([]);
 
+  const [isExportClicked, setIsExportClicked] = useState(false)
+  const [isGenerateClicked, setIsGenerateClicked] = useState(false)
+  const [hasGenerated, setHasGenerated] = useState(false)
+  const forceUpdate = useForceUpdate();
+  const [isSelectedEmployeesMixed, setIsSelectedEmployeesMixed] = useState(false)
+  const [isGenerateStrict, setIsGenerateStrict] = useState(true)
 
   useEffect(() => {
     getEmployees()
       .then((response) => {
-        console.log(response)
-        console.log(response.data.data.employees)
+        // console.log(response.data.data.employees)
         setEmployees(response.data.data.employees)
         setIsEmployeesChanged(false)
       })
@@ -67,25 +72,39 @@ const Payroll: React.FC = () => {
   useEffect(() => {
     getPositions()
       .then((response) => {
-        console.log(response.data.data.positions)
+        // console.log(response.data.data.positions)
         setPositions(response.data.data.positions)
       })
   }, [])
 
 
   const handleEmployeeSelection = (selectedOptions: any) => {
-    const selectedIds = selectedOptions.map((option: any) => option.value);
-    setSelectedEmployees(selectedIds);
+    setSelectedEmployees(selectedOptions);
   }
 
-  const handlePositionSelection = (selectedOptions: any) => {
-    const selectedPositionIds = selectedOptions.map((option: any) => option.value);
-    setSelectedPositions(selectedPositionIds);
-  };
 
-  const handlePayoutSelection = (selectedOptions: any) => {
-    const selectedPayoutsModes = selectedOptions.map((option: any) => option.value);
-    setSelectedPayouts(selectedPayoutsModes)
+  const handlePayoutSelection = (selectedOption: any) => {
+    let tempEmployees:any = []
+
+    employees.forEach((e:Employee)=>{
+        if(e.payout === selectedOption.value){
+            const employeeObj = {value: e.id, label: e.first_name + " " + (e.middle_name === ""? "":e.middle_name+" ") + e.last_name}
+            tempEmployees.push(employeeObj)
+        }
+    })
+    setSelectedEmployees(tempEmployees)
+    setSelectedPayouts(selectedOption.value)
+
+    if (selectedOption.value === "monthly"){
+        setStartDate(dayjs().startOf("month"))
+        setEndDate(dayjs())
+    } else if (selectedOption.value === "weekly"){
+        setStartDate(dayjs().startOf("week"))
+        setEndDate(dayjs())
+    }
+
+    forceUpdate()
+    
   };
 
   const handleDateChange = (range: any) => {
@@ -93,148 +112,146 @@ const Payroll: React.FC = () => {
     setEndDate(range[1])
   }
 
+  const isPayoutSame = (data:any) => {
+        const currPayout = data[0].payout
+        data.forEach((e:Employee)=>{
+            if(e.payout !== currPayout)
+                return false
+        
+        })
+            
+        return true
+    }
+
   const handleGenerateReport = async () => {
-    const selectedEmployeesData = employees.filter((employee) => selectedEmployees.includes(employee.id));
-    let filteredEmployeesData = selectedEmployeesData;
+    toast.loading("Generating payroll...")
+    setIsGenerateClicked(true)
 
-    if (selectedPositions.length > 0) {
-      filteredEmployeesData = filteredEmployeesData.filter((employee) =>
-        selectedPositions.includes(employee.position_id)
-      );
+    if (selectedEmployees.length === 0)
+      return
+
+    let selectedEmployeesId = selectedEmployees.map(({value}:any)=>value)
+    let selectedEmployeesData = employees.filter((employee) => selectedEmployeesId.includes(employee.id));
+    
+    const payoutSame = isPayoutSame(selectedEmployeesData)
+
+    if (!payoutSame){
+        toast.error("Selected employees have different payout schedule. \nPlease select employees with similar schedule.", longToasterConfig)
+        setIsGenerateClicked(false)
+        return
+    } 
+
+    if(isGenerateStrict){
+    
+        const payout = selectedEmployeesData[0].payout
+        if(payout === "monthly" && !dayjs().isSame(dayjs().endOf("month"))){
+            toast.dismiss()
+            toast.error("Selected employees have monthly payouts. \nYou can only generate payroll at the end of the month.", longToasterConfig)
+            setIsGenerateClicked(false)
+            return
+        }
+        if(payout === "weekly" && !dayjs().isSame(dayjs().endOf("week"))){
+            toast.dismiss()
+            toast.error("Selected employees have monthly payouts. \nYou can only generate payroll at the end of the month.", longToasterConfig)
+            setIsGenerateClicked(false)
+            return
+        }
     }
 
-    if (selectedPayouts.length > 0) {
-      filteredEmployeesData = filteredEmployeesData.filter((employee) =>
-        selectedPayouts.includes(employee.payout)
-      );
+
+
+    // console.log(selectedEmployeesData)
+    let payroll:any = []
+
+    for (let i=0; i<selectedEmployeesData.length; i++){
+        let employee = selectedEmployeesData[i]
+        const response1 = await getPayroll("", employee.id, "", startDate.format("YYYY-MM-DD"), endDate.format("YYYY-MM-DD"))
+        try{
+            payroll.push(response1.data.data.salaries[0])
+        } catch {
+            const response2 = await createPayroll(employee.id, employee.payout, startDate.format("YYYY-MM-DD"), endDate.format("YYYY-MM-DD"))
+            try{
+                const response3 = await getPayroll("", employee.id, "", startDate.format("YYYY-MM-DD"), endDate.format("YYYY-MM-DD"))
+                payroll.push(response3.data.data.salaries[0])
+            } catch {
+
+            }
+        }
     }
 
-    const generatedReport = await Promise.all(filteredEmployeesData.map(async (employee) => {
-      let totalAttendance = 0;
-      let totalAdvance = 0;
+    toast.dismiss()
+    toast.success("Payroll generated")
+    setIsGenerateClicked(false)
+    setHasGenerated(true)
+    setReportData(payroll);
+    setTotalSalary(payroll.reduce((total:number, item:any) => total + Number(item.net_salary), 0));
 
-      const attendanceData = await getAttendance(employee.id, startDate.format("YYYY-MM-DD"), endDate.format("YYYY-MM-DD"))
-        .then((response) => {
-          console.log(response.data.data.attendance)
-
-          response.data.data.attendance.map((a: any) => {
-            console.log(a.status)
-            if (a.status == "present")
-              totalAttendance += 1
-            else if (a.status === "halfday")
-              totalAttendance += 0.5
-          });
-
-        })
-        .catch(() => {
-          console.log("ERROR! :: getAttendance -> response !== 200 :: TotalAttendance set to 0")
-        });
-
-      const advanceData = await getAdvance(employee.id, startDate.format("YYYY-MM-DD"), endDate.format("YYYY-MM-DD"))
-        .then((response) => {
-          // console.log(response)
-          console.log(response.data.data.advance)
-          response.data.data.advance.map((a: any) => {
-            totalAdvance += Number(a.amount)
-          });
-        })
-        .catch(() => {
-          console.log("ERROR! :: getAdvance -> response !== 200 :: totalAdvance set to 0")
-        });
-
-      const rate = parseInt(employee.rate);
-      const grossSalary = totalAttendance * rate;
-      const netSalary = grossSalary - totalAdvance - parseInt(employee.SSS ?? "0");
-
-      return {
-        full_name: `${employee.first_name} ${employee.middle_name} ${employee.last_name}`,
-        position: employee.position_name,
-        num_days: totalAttendance,
-        rate: employee.rate,
-        gross_salary: grossSalary,
-        cash_advance: totalAdvance,
-        employee_sss: employee.SSS ?? "0",
-        net_salary: netSalary
-      };
-    }));
-
-    setReportData(generatedReport);
   };
+
+
 
   const columns: any = [
     {
       title: "Name",
-      dataIndex: "full_name",
-      key: "full_name",
+      dataIndex: "employee",
+      key: "employee",
     },
     {
       title: "Position",
       dataIndex: "position",
-      key: "position"
+      key: "position",
     },
     {
       title: "# of Days",
-      dataIndex: "num_days",
-      key: "num_days"
+      dataIndex: "days",
+      key: "days",
     },
     {
       title: "Rate",
       dataIndex: "rate",
-      key: "rate"
+      key: "rate",
+      render: (value: number) => moneyFormatter.format(value)
     },
     {
       title: "Gross Salary",
       dataIndex: "gross_salary",
-      key: "gross_salary"
+      key: "gross_salary",
+      render: (value: number) => moneyFormatter.format(value)
     },
     {
-      title: "CA",
-      dataIndex: "cash_advance",
-      key: "cash_advance"
+      title: "Advance",
+      dataIndex: "advances",
+      key: "advances",
+      render: (value: number) => moneyFormatter.format(value)
     },
     {
       title: "SSS",
-      dataIndex: "employee_sss",
-      key: "employee_sss"
+      dataIndex: "sss",
+      key: "sss",
+      render: (value: number) => moneyFormatter.format(value)
     },
     {
       title: "Net Salary",
       dataIndex: "net_salary",
-      key: "net_salary"
-    }
+      key: "net_salary",
+      render: (value: number) => moneyFormatter.format(value)
+    },
   ];
 
-  const handleExportCSV = () => {
-    // Prepare the CSV data
-    // const csvData = reportData;
-    const csvData: any = reportData.map(item => ({
-      Name: item.full_name,
-      Position: item.position,
-      '# of Days': item.num_days,
-      Rate: item.rate,
-      'Gross Salary': item.gross_salary,
-      CA: item.cash_advance,
-      SSS: item.employee_sss || '0', // Set SSS to '0' if it's null
-      'Net Salary': item.net_salary,
-    }));
+  const handleExport = async () => {
+    toast.loading("Generating PDF", toasterConfig)
 
-    // Define the CSV configuration
-
-    const options = {
-      fieldSeparator: ',',
-      filename: 'payroll_' + startDate.format("YYYY-MM-DD") + '_to_' + endDate.format("YYYY-MM-DD"),
-      quoteStrings: '"',
-      decimalSeparator: '.',
-      showLabels: true,
-      useTextFile: false,
-      useBom: true,
-      useKeysAsHeaders: true,
-    };
-
-    const csvExporter = new ExportToCsv(options);
-
-    csvExporter.generateCsv(csvData);
-  };
+    if (reportData.length === 0) {
+      toast.dismiss()
+      toast.error("Error generating PDF", toasterConfig)
+    }
+    else {
+      // console.log(reportData)
+      Payroll2PDF(reportData, startDate, endDate);
+      toast.dismiss()
+      toast.success("PDF successfully generated", toasterConfig)
+    }
+  }
 
   const payout_options = [
     { value: 'monthly', label: 'Monthly' },
@@ -243,7 +260,7 @@ const Payroll: React.FC = () => {
 
   const CheckboxOption = (props: OptionProps<any>) => {
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-      props.selectOption(props.data)
+        props.selectOption(props.data)
     }
 
     return (
@@ -254,9 +271,8 @@ const Payroll: React.FC = () => {
     )
   };
 
-  console.log(reportData)
+  // console.log(reportData)
   return (
-
     <div className="payroll-container">
       <Helmet>
         <title>Payroll - {AppName}</title>
@@ -269,91 +285,92 @@ const Payroll: React.FC = () => {
 
           <div className="payroll-header">
             <h1>PAYROLL</h1>
-          </div>
 
-          <div className="payroll-date-range-container">
-            <div className="payroll-date-range-label">
-              <p>Date range</p>
+            <div className="payroll-date-range-container">
+              <div className="payroll-date-range-label">
+                <p>Date range</p>
+              </div>
+
+              <RangePicker
+                className="advance-rangepicker"
+                size={"small"}
+                value={[startDate, endDate]}
+                style={{ width: '13vw' }}
+                format={"MMM DD YYYY"}
+                separator={"to"}
+                bordered={false}
+                onCalendarChange={e => handleDateChange(e)}
+              />
             </div>
 
-            <RangePicker
-              className="advance-rangepicker"
-              size={"small"}
-              defaultValue={[startDate, endDate]}
-              style={{ width: '65%' }}
-              format={"MMM DD YYYY"}
-              separator={"to"}
-              bordered={false}
-              onCalendarChange={e => handleDateChange(e)}
-            />
+            <div className="payroll-btns-container">
+                {/* <div className="payroll-generate-button-container">
+                    <input type="checkbox" checked={isGenerateStrict} onClick={()=>setIsGenerateStrict(prev=>!prev)}/>
+                    <text>Is strict?  </text>
+                </div> */}
+                <div className="payroll-generate-button-container">
+                    <Button
+                    type={"generate-payroll"}
+                    handleClick={handleGenerateReport}
+                    />
+                </div>
+
+                <div className="payroll-export-container">
+                <Button
+                    type="expense-export"
+                    handleClick={() => handleExport()}
+                    disabled={!hasGenerated || isExportClicked}
+                />
+                </div>
+            </div>
           </div>
 
           <div className="payroll-employee-detail-menus">
-
-            <div className="payroll-menu-labels">
-              <h1 className="payroll-menu-label-employees">EMPLOYEES</h1>
-              <h1 className="payroll-menu-label-position">POSITION</h1>
-              <h1 className="payroll-menu-label-sss">PAYOUT</h1>
-            </div>
-
+            
             <div className="payroll-menus-container">
-
-              <Select
-                className="payroll-menu-employees-dropdown"
-                closeMenuOnSelect={false}
-                isMulti
-                components={{ Option: CheckboxOption }}
-                options={employees.map(({ id, first_name, middle_name, last_name }) => ({ value: id, label: first_name + " " + middle_name + " " + last_name }))}
-                onChange={handleEmployeeSelection}
-              />
-
-              <Select
-                className="payroll-menu-positions-dropdown"
-                closeMenuOnSelect={false}
-                isMulti
-                components={{ Option: CheckboxOption }}
-                options={positions.map(({ id, name }) => ({ value: id, label: name }))}
-                onChange={handlePositionSelection}
-              />
-
-              <Select
-                className="payroll-menu-payouts-dropdown"
-                closeMenuOnSelect={false}
-                isMulti
-                components={{ Option: CheckboxOption }}
-                options={payout_options}
-                onChange={handlePayoutSelection}
-              />
+                <div className="payroll-menus-section payout">
+                    <h3 className="payroll-menu-label payout">PAYOUT</h3>
+                    <Select
+                        className="payroll-menu-dropdown payout"
+                        closeMenuOnSelect={true}
+                        options={payout_options}
+                        onChange={handlePayoutSelection}
+                        isSearchable={false}
+                    />
+                </div>
+                <div className="payroll-menus-section employees">
+                    <h3 className="payroll-menu-label">EMPLOYEES</h3>
+                    <Select
+                        className="payroll-menu-dropdown employees"
+                        value={selectedEmployees}
+                        defaultValue={selectedEmployees}
+                        closeMenuOnSelect={false}
+                        isMulti
+                        components={{ Option: CheckboxOption }}
+                        options={employees.map(({ id, first_name, middle_name, last_name }:any) => ({ value: id, label: first_name + " " + (middle_name === ""? "":middle_name+" ") + last_name }))}
+                        onChange={handleEmployeeSelection}
+                        controlShouldRenderValue={true}
+                    />
+                </div>
+                
             </div>
-
-          </div>
-
-          <div className="payroll-separator-bar" />
-
-          <div className="payroll-generate-button-container">
-            <Button
-              type={"generate-payroll"}
-              handleClick={handleGenerateReport}
-            />
           </div>
 
           <div className="payroll-details-table">
             <Table
               columns={columns}
               dataSource={reportData}
+              pagination={false}
+              scroll={{ y:"55vh"}}
             />
           </div>
 
-          <div className="payroll-export-container">
-            <Button
-              type={"export-csv"}
-              handleClick={handleExportCSV}
-            />
+          <div className="payroll-total-net-salary">
+            <p>Total: {' '}
+              <span>{moneyFormatter.format(totalSalary)}</span> </p>
           </div>
         </div>
-
       </div>
-
     </div>
   )
 }

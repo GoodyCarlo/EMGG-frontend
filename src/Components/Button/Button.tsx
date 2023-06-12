@@ -273,7 +273,8 @@ const Button: React.FC<ButtonProps> = ({
         className="btn-hover-fx btn-user light"
         onClick={e => handleClick(e)}
       >
-        GENERATE
+        <FontAwesomeIcon icon={["fas", "peso-sign"]} className="user-icon" />
+        Generate Payroll
       </button>
     )
   }
@@ -318,13 +319,13 @@ const Button: React.FC<ButtonProps> = ({
   if (type === "expenses-add-item") {
     return (
       <button
-        className={"btn-hover-fx btn-expenses dark " + className}
+        className={"btn-hover-fx btn-expenses btn-expense-add dark " + className}
         onClick={e => handleClick(e)}
         name={"add-item"}
         disabled={disabled}
       >
         <FontAwesomeIcon icon={["fas", "plus"]} className="add-icon" />
-        Add entry
+        Add
       </button>
     )
   }

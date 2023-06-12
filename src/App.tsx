@@ -1,7 +1,7 @@
 import './App.css';
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { useEffect} from 'react';
-import { isLoggedIn } from './Helpers/UserFunctions';
+import { useEffect, useState } from 'react';
+import { IsLoggedIn } from './Helpers/UserFunctions';
 
 import Login from './Pages/Login/Login';
 import Dashboard from './Pages/Dashboard/Dashboard';
@@ -15,82 +15,60 @@ import { fas } from '@fortawesome/free-solid-svg-icons';
 import { CheckUserSession } from './ApiCalls/AuthApi';
 import toasterConfig, { tokenExpiryConfig } from './Helpers/ToasterConfig';
 
-const TokenListener:any =({}) => {
-  const location = useLocation()
+function App() {
+  library.add(fas)
+  const [loggedIn, setloggedIn] = useState(true)
 
-  useEffect(() => {
-    // const time = new Date();
-    
-    CheckUserSession()
-        .then((response)=>{
-            console.log(response)
-            if (response.data.status != 200){
-              localStorage.setItem("loggedin", "1")
-              // setTimeout(() => {
-              //   window.location.reload()
-              // }, 2000);
-              toast.error('User Session Expired. Please log in again', tokenExpiryConfig);
-            }else{
-              // console.log(localStorage.getItem("tokenExpiry"))
-              // console.log(moment(localStorage.getItem("tokenExpiry"),"YYYY-MM-DD hh:mm:ss").diff(Date.now(),'seconds'))
-              // time.setSeconds(time.getSeconds()+10)
-              // localStorage.setItem("loggedin", "0")
-            }
-        })
-  }, [location]);
+  IsLoggedIn().
+    then((response) => {
+      setloggedIn(response)
+    })
 
-  return(
-    <div></div>
-  )
-}
-
-function App() {  
-  library .add(fas)
   return (
     <div className="App">
       <div className='toaster-container'>
-        <Toaster position="bottom-center" reverseOrder={false}/>
+        <Toaster position="bottom-center" reverseOrder={false} />
       </div>
       <BrowserRouter>
         <Routes>
-          <Route 
-              path="/" 
-              element={1? <Dashboard/>:<Login/>}  
-            />
+          <Route
+            path="/"
+            element={1 ? <Dashboard /> : <Login />}
+          />
           <Route
             path="/payroll"
-            element={1? <Payroll/>:<Login/>}
+            element={loggedIn ? <Payroll /> : <Login />}
           />
           <Route
             path="/expenses"
-            element={isLoggedIn()? <Expenses/>:<Login/>}
+            element={loggedIn ? <Expenses /> : <Login />}
           />
           <Route
             path="/employees"
-            element={isLoggedIn()? <Employees/>:<Login/>}
+            element={loggedIn ? <Employees /> : <Login />}
           />
           <Route
             path="/employees/:action"
-            element={isLoggedIn()? <Employees/>:<Login/>}
+            element={loggedIn ? <Employees /> : <Login />}
           />
           <Route
             path="/employees/:action/:user_id"
-            element={isLoggedIn()? <Employees/>:<Login/>}
+            element={loggedIn ? <Employees /> : <Login />}
           />
           <Route
             path="/users"
-            element={isLoggedIn()? <Users/>:<Login/>}
-          /> 
+            element={loggedIn ? <Users /> : <Login />}
+          />
           <Route
             path="/users/:action"
-            element={isLoggedIn()? <Users/>:<Login/>}
-          /> 
+            element={loggedIn ? <Users /> : <Login />}
+          />
           <Route
             path="/users/:action/:user_id"
-            element={isLoggedIn()? <Users/>:<Login/>}
-          /> 
+            element={loggedIn ? <Users /> : <Login />}
+          />
         </Routes>
-        <TokenListener/>
+        {/* <TokenListener/> */}
       </BrowserRouter>
     </div>
   );
